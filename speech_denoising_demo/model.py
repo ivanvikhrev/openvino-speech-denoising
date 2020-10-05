@@ -20,7 +20,8 @@ class SpeechDenoiser(ABC):
          '''Perform Noise Suppression'''
 
 class DeepNoiseSuppression(SpeechDenoiser):
-    chunk = 1
+    chunk = 0.1
+    frames = 1000
     def __init__(self, model, device):
         log.basicConfig(format='[ %(levelname)s ] %(message)s', level= log.INFO, stream=sys.stdout)
         self.cfg = {
@@ -35,7 +36,11 @@ class DeepNoiseSuppression(SpeechDenoiser):
         ie = IECore()
         # log.info("Loading network")
         net = ie.read_network(model, os.path.splitext(model)[0] + ".bin")
+        net.reshape({'input':[1, 100, 161]})
         self.input_blob = next(iter(net.input_info)) # ?
+        b, f, h = net.input_info[self.input_blob].input_data.shape
+        print(net.input_info[self.input_blob].input_data.shape)
+        net.reshape({self.input_blob: (b, self.chunk*self.frames, h)})
         self.output_blob = 'Sigmoid_31'
         assert len(net.input_info) == 1, "One input is expected"
         # Loading model to the plugin
